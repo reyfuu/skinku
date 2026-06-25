@@ -172,7 +172,8 @@ class PurchaseOrderController extends Controller
     public function uploadPayment(Request $request, PurchaseOrder $purchaseOrder): RedirectResponse
     {
         $user = $request->user();
-        if ($user->isPartner() && $purchaseOrder->user_id !== $user->id) {
+        $isOwner = $purchaseOrder->user_id === $user->id;
+        if (! $isOwner && ! $user->canDo('update_po_status')) {
             abort(403, 'Anda hanya dapat mengunggah bukti untuk PO Anda sendiri.');
         }
 

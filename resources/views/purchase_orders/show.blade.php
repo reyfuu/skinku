@@ -12,7 +12,8 @@
         'paid'                  => ['Lunas', 'bg-emerald-100 text-emerald-700'],
         'rejected'              => ['Bukti Ditolak', 'bg-rose-100 text-rose-700'],
     ][$po->payment_status] ?? ['-', 'bg-stone-100 text-stone-600'];
-    $isOwner = $u->isPartner() && $po->user_id === $u->id;
+    $isOwner = $po->user_id === $u->id;
+    $canUploadProof = $isOwner || $u->canDo('update_po_status');
 @endphp
 <div class="grid lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
@@ -122,8 +123,8 @@
                 <p class="text-[11px] text-stone-500 mb-3">Catatan: {{ $po->payment_note }}</p>
             @endif
 
-            {{-- Buyer uploads proof (when ongkir already set & not yet paid) --}}
-            @if($isOwner && in_array($po->payment_status, ['unpaid','rejected']))
+            {{-- Buyer (or admin on behalf) uploads proof when ongkir set & not yet paid --}}
+            @if($canUploadProof && in_array($po->payment_status, ['unpaid','rejected']))
                 @if($po->shipping_cost == 0)
                     <p class="text-[11px] text-amber-600">Menunggu admin menetapkan ongkir. Setelah total final muncul, Anda bisa transfer & unggah bukti.</p>
                 @else
