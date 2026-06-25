@@ -14,11 +14,25 @@
                 </thead>
                 <tbody>
                     @forelse($products as $i => $p)
-                        @php $price = $p->{$priceField}; @endphp
+                        @php $price = $p->{$priceField}; $urls = $p->imageUrls(); @endphp
                         <tr class="border-t border-stone-100">
                             <td class="px-4 py-3">
-                                <p class="font-semibold text-stone-800">{{ $p->name }}</p>
-                                <p class="text-[10px] text-stone-400">{{ $p->sku }}</p>
+                                <div class="flex items-center gap-3">
+                                    @if(count($urls))
+                                        <a href="{{ $urls[0] }}" class="glightbox shrink-0" data-gallery="po-prod-{{ $p->id }}" title="Klik untuk lihat foto">
+                                            <img src="{{ $urls[0] }}" class="w-11 h-11 rounded-lg object-cover border border-stone-200 hover:opacity-80 transition">
+                                        </a>
+                                        @foreach(array_slice($urls, 1) as $u)
+                                            <a href="{{ $u }}" class="glightbox" data-gallery="po-prod-{{ $p->id }}" style="display:none"></a>
+                                        @endforeach
+                                    @else
+                                        <span class="w-11 h-11 rounded-lg bg-stone-100 flex items-center justify-center shrink-0">{{ $p->image ?: '🧴' }}</span>
+                                    @endif
+                                    <div>
+                                        <p class="font-semibold text-stone-800">{{ $p->name }}</p>
+                                        <p class="text-[10px] text-stone-400">{{ $p->sku }}@if(count($urls) > 1) · {{ count($urls) }} foto @endif</p>
+                                    </div>
+                                </div>
                                 <input type="hidden" name="items[{{ $i }}][product_id]" value="{{ $p->id }}">
                             </td>
                             <td class="text-right text-stone-700" data-price="{{ $price }}">Rp {{ number_format($price, 0, ',', '.') }}</td>

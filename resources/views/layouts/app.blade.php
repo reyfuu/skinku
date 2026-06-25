@@ -7,6 +7,8 @@
     <title>@yield('title', 'Dashboard') · {{ config('app.name') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
     <script>
         tailwind.config = {
             theme: { extend: { colors: {
@@ -143,6 +145,10 @@
     function toggleModal(id) {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('hidden');
+    }
+    // Clickable + swipeable product photo galleries.
+    if (window.GLightbox) {
+        window.skinkuLightbox = GLightbox({ selector: '.glightbox', loop: true, touchNavigation: true });
     }
 </script>
 @stack('scripts')
