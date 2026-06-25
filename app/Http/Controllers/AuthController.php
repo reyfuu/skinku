@@ -114,8 +114,13 @@ class AuthController extends Controller
     {
         $request->validate(['email' => ['required', 'email']]);
 
-        // Always respond generically so we never leak whether an email exists.
-        Password::sendResetLink($request->only('email'));
+        // Sending may fail if SMTP isn't configured yet — never let that 500 the
+        // page, and always respond generically so we don't leak whether an email exists.
+        try {
+            Password::sendResetLink($request->only('email'));
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return back()->with('status', 'Jika email terdaftar, link reset password akan dikirim ke email tersebut.');
     }

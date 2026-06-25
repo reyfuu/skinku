@@ -78,7 +78,7 @@
             @endif
 
             @if($u->canDo('view_reports'))
-                {!! navItem('reports.index', 'Laporan Penjualan', 'reports.index') !!}
+                {!! navItem('reports.index', $u->isPartner() ? 'Laporan Pembelian' : 'Laporan Penjualan', 'reports.index') !!}
             @endif
 
             @if($u->canDo('manage_users'))
