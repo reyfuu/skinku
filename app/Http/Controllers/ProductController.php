@@ -4,13 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Services\AuditService;
+use App\Services\ImageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
+    public const MAX_IMAGES = 8;
+
+    public function __construct(private ImageService $images) {}
+
     public function index(Request $request)
     {
         $filters = $request->only(['q', 'status', 'category']);
@@ -38,10 +44,18 @@ class ProductController extends Controller
     {
         $data = $this->validateData($request);
 
-        $data['image_path'] = $this->storeImage($request);
-        $data['name'] = $data['name'];
+        $product = Product::create(Arr::except($data, ['images', 'remove_images']));
 
-        $product = Product::create($data);
+        $gallery = [];
+        foreach ($request->file('images', []) as $img) {
+            if (count($gallery) >= self::MAX_IMAGES) {
+                break;
+            }
+            $gallery[] = $this->images->storeResized($img, 'products');
+        }
+        $product->images = $gallery;
+        $product->image_path = $gallery[0] ?? null;
+        $product->save();
 
         AuditService::log(
             action: 'create_product',
@@ -59,17 +73,32 @@ class ProductController extends Controller
 
         $before = $product->only(['name', 'sku', 'price_distributor', 'price_reseller', 'price_retail', 'cogs', 'hq_stock', 'status']);
 
-        if ($request->hasFile('image')) {
-            $newPath = $this->storeImage($request);
-            if ($newPath) {
-                if ($product->image_path) {
-                    Storage::disk('public')->delete($product->image_path);
+        $product->update(Arr::except($data, ['images', 'remove_images']));
+
+        $gallery = $product->images ?? [];
+
+        // Remove the images the user unchecked.
+        $remove = $request->input('remove_images', []);
+        if (! empty($remove)) {
+            foreach ($remove as $path) {
+                if (in_array($path, $gallery, true)) {
+                    Storage::disk('public')->delete($path);
                 }
-                $data['image_path'] = $newPath;
             }
+            $gallery = array_values(array_diff($gallery, $remove));
         }
 
-        $product->update($data);
+        // Append newly uploaded images (capped at MAX_IMAGES total).
+        foreach ($request->file('images', []) as $img) {
+            if (count($gallery) >= self::MAX_IMAGES) {
+                break;
+            }
+            $gallery[] = $this->images->storeResized($img, 'products');
+        }
+
+        $product->images = $gallery;
+        $product->image_path = $gallery[0] ?? null;
+        $product->save();
 
         AuditService::log(
             action: 'update_product',
@@ -112,17 +141,11 @@ class ProductController extends Controller
             'cogs' => ['required', 'numeric', 'min:0'],
             'hq_stock' => ['required', 'integer', 'min:0'],
             'status' => ['required', Rule::in([Product::STATUS_ACTIVE, Product::STATUS_INACTIVE])],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            // Up to 8 photos; each auto-resized server-side, so allow large originals.
+            'images' => ['nullable', 'array', 'max:'.self::MAX_IMAGES],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:12288'],
+            'remove_images' => ['nullable', 'array'],
+            'remove_images.*' => ['string'],
         ]);
-    }
-
-    /** Safely store an uploaded product image on the public disk. */
-    private function storeImage(Request $request): ?string
-    {
-        if (! $request->hasFile('image')) {
-            return null;
-        }
-
-        return $request->file('image')->store('products', 'public');
     }
 }

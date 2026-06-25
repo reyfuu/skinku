@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Services\AuditService;
+use App\Services\ImageService;
 use App\Services\PurchaseOrderService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ use RuntimeException;
 
 class PurchaseOrderController extends Controller
 {
-    public function __construct(private PurchaseOrderService $service) {}
+    public function __construct(private PurchaseOrderService $service, private ImageService $images) {}
 
     public function index(Request $request)
     {
@@ -178,11 +179,11 @@ class PurchaseOrderController extends Controller
         }
 
         $data = $request->validate([
-            'proof' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'proof' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:12288'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $path = $request->file('proof')->store('payment-proofs', 'public');
+        $path = $this->images->storeResized($request->file('proof'), 'payment-proofs', 1600);
 
         $this->service->recordPaymentProof($purchaseOrder, $path, $data['note'] ?? null);
 

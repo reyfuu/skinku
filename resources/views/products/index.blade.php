@@ -48,8 +48,14 @@
                     <td><span class="px-2 py-0.5 rounded-full text-[10px] {{ $p->status==='active' ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-600' }}">{{ $p->status }}</span></td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         @if($p->status !== 'deleted')
+                            @php
+                                $gallery = [];
+                                foreach (($p->images ?? []) as $gp) {
+                                    $gallery[] = ['path' => $gp, 'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($gp)];
+                                }
+                            @endphp
                             <button class="text-stone-500 hover:text-stone-900 font-semibold"
-                                onclick='openProduct({{ json_encode($p->only(["id","name","sku","category","description","price_distributor","price_reseller","price_retail","cogs","hq_stock","status"])) }})'>Edit</button>
+                                onclick='openProduct({{ json_encode($p->only(["id","name","sku","category","description","price_distributor","price_reseller","price_retail","cogs","hq_stock","status"]) + ["gallery" => $gallery]) }})'>Edit</button>
                             <form method="POST" action="{{ route('products.destroy', $p) }}" class="inline" onsubmit="return confirm('Hapus produk ini (soft delete)?')">
                                 @csrf @method('DELETE')
                                 <button class="ml-2 text-rose-600 hover:text-rose-800 font-semibold">Hapus</button>
@@ -87,7 +93,12 @@
                 <select name="status" class="w-full px-3 py-2 border border-stone-300 rounded-lg"><option value="active">active</option><option value="inactive">inactive</option></select>
             </div>
             <div class="col-span-2"><label class="block text-xs font-semibold mb-1">Deskripsi</label><textarea name="description" rows="2" class="w-full px-3 py-2 border border-stone-300 rounded-lg"></textarea></div>
-            <div class="col-span-2"><label class="block text-xs font-semibold mb-1">Foto Produk (jpg/png/webp, maks 2MB)</label><input type="file" name="image" accept="image/*" class="w-full text-xs"></div>
+            <div class="col-span-2">
+                <label class="block text-xs font-semibold mb-1">Foto Produk (maks 8 foto · otomatis di-resize)</label>
+                <div id="productExistingImages" class="flex flex-wrap gap-2 mb-2"></div>
+                <input type="file" name="images[]" accept="image/*" multiple class="w-full text-xs">
+                <p class="text-[10px] text-stone-400 mt-1">Bisa pilih beberapa foto sekaligus. Foto besar otomatis dikecilkan agar hemat penyimpanan. Saat edit, centang "hapus" untuk membuang foto lama.</p>
+            </div>
             <div class="col-span-2 flex justify-end gap-2 mt-2">
                 <button type="button" onclick="toggleModal('productModal')" class="px-4 py-2 text-stone-600 rounded-lg">Batal</button>
                 <button class="px-5 py-2 bg-red-600 text-white rounded-lg">Simpan</button>
@@ -101,6 +112,8 @@
 <script>
     function openProduct(p) {
         const f = document.getElementById('productForm');
+        const existing = document.getElementById('productExistingImages');
+        existing.innerHTML = '';
         if (p) {
             f.action = '/products/' + p.id;
             document.getElementById('productMethod').value = 'PUT';
@@ -108,6 +121,16 @@
             for (const k of ['name','sku','category','description','price_distributor','price_reseller','price_retail','cogs','hq_stock','status']) {
                 if (f.querySelector('[name='+k+']')) f.querySelector('[name='+k+']').value = p[k] ?? '';
             }
+            // render existing gallery with "hapus" checkboxes
+            (p.gallery || []).forEach(img => {
+                const wrap = document.createElement('label');
+                wrap.className = 'relative block w-16 h-16 cursor-pointer';
+                wrap.innerHTML =
+                    '<img src="' + img.url + '" class="w-16 h-16 object-cover rounded-lg border border-stone-200">' +
+                    '<span class="absolute -top-1 -right-1 bg-white rounded-full border border-stone-200 p-0.5">' +
+                    '<input type="checkbox" name="remove_images[]" value="' + img.path + '" class="accent-red-600" title="hapus"></span>';
+                existing.appendChild(wrap);
+            });
         } else {
             f.action = '{{ route('products.store') }}';
             document.getElementById('productMethod').value = 'POST';

@@ -18,7 +18,7 @@ class Product extends Model
     public const STATUS_DELETED = 'deleted';
 
     protected $fillable = [
-        'name', 'sku', 'category', 'description', 'image', 'image_path',
+        'name', 'sku', 'category', 'description', 'image', 'image_path', 'images',
         'price_distributor', 'price_reseller', 'price_retail', 'cogs',
         'hq_stock', 'status',
     ];
@@ -31,6 +31,7 @@ class Product extends Model
             'price_retail' => 'decimal:2',
             'cogs' => 'decimal:2',
             'hq_stock' => 'integer',
+            'images' => 'array',
         ];
     }
 
@@ -39,10 +40,20 @@ class Product extends Model
         return $this->status === self::STATUS_ACTIVE;
     }
 
-    /** Public URL for the product image, or null when none was uploaded. */
+    /** Primary product image URL (first gallery image, or legacy single path). */
     public function imageUrl(): ?string
     {
-        return $this->image_path ? Storage::disk('public')->url($this->image_path) : null;
+        $first = $this->images[0] ?? $this->image_path;
+
+        return $first ? Storage::disk('public')->url($first) : null;
+    }
+
+    /** All gallery image URLs (resized). */
+    public function imageUrls(): array
+    {
+        $paths = ! empty($this->images) ? $this->images : array_filter([$this->image_path]);
+
+        return array_map(fn ($p) => Storage::disk('public')->url($p), $paths);
     }
 
     /** Returns the unit price for a given role. */
