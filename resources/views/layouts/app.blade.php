@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', 'Dashboard') · {{ config('app.name') }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: {
+                brand: { dark: '#1c1917', gold: '#c8a96a', emerald: '#0f4c3a', cream: '#faf7f2' }
+            }}}
+        };
+    </script>
+    @stack('head')
+</head>
+<body class="h-full bg-stone-100 text-stone-800 antialiased">
+@php
+    $u = auth()->user();
+    $isStaff = $u->isStaff();
+    $isManagement = $u->isManagement();
+@endphp
+
+<div class="min-h-full flex">
+    {{-- Sidebar --}}
+    <aside class="w-64 bg-red-800 text-red-50 flex flex-col fixed inset-y-0 left-0 z-30">
+        <div class="p-6 border-b border-red-900/50">
+            <h1 class="text-2xl font-bold tracking-tight text-white">SKINKU<span class="text-white text-3xl leading-none">.</span></h1>
+            <p class="text-[10px] uppercase tracking-widest text-red-200 font-semibold mt-1">B2B Distributor Portal</p>
+        </div>
+
+        <div class="px-5 py-4 border-b border-red-900/50">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center font-bold text-red-700 uppercase text-xs">
+                    {{ strtoupper(mb_substr($u->displayName(), 0, 2)) }}
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-white truncate">{{ $u->displayName() }}</p>
+                    <p class="text-[10px] text-red-200 truncate">{{ $u->email }}</p>
+                </div>
+            </div>
+            <div class="mt-3 flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[9px] rounded font-bold uppercase bg-white/20 text-white">{{ str_replace('_', ' ', $u->role) }}</span>
+                @if($u->company_name)<span class="text-[9.5px] text-red-200 truncate max-w-[110px]">{{ $u->company_name }}</span>@endif
+            </div>
+        </div>
+
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto text-xs font-semibold">
+            @php
+                if (!function_exists('navItem')) {
+                    function navItem($route, $label, $active) {
+                        $is = request()->routeIs($active);
+                        $cls = $is ? 'bg-red-900 text-white border-l-4 border-white pl-3' : 'text-red-100 hover:text-white hover:bg-red-900/50 pl-4';
+                        return '<a href="'.route($route).'" class="flex items-center gap-3 pr-4 py-2.5 rounded-lg '.$cls.'">'.$label.'</a>';
+                    }
+                }
+            @endphp
+
+            {!! navItem('dashboard', 'Dashboard', 'dashboard') !!}
+
+            @if($u->isPartner())
+                {!! navItem('purchase-orders.create', 'Buat PO', 'purchase-orders.create') !!}
+                {!! navItem('purchase-orders.index', 'Riwayat PO', 'purchase-orders.index') !!}
+                {!! navItem('inventory.index', 'Stok Saya', 'inventory.index') !!}
+                @if($u->role === \App\Models\User::ROLE_DISTRIBUTOR)
+                    {!! navItem('reports.index', 'Laporan Saya', 'reports.index') !!}
+                @endif
+            @else
+                {!! navItem('purchase-orders.index', 'Purchase Orders', 'purchase-orders.index') !!}
+                @if($isManagement)
+                    {!! navItem('products.index', 'Manajemen Produk', 'products.index') !!}
+                @endif
+                {!! navItem('inventory.index', 'Pemantauan Stok', 'inventory.index') !!}
+                @if($u->isGudang())
+                    {!! navItem('stock-movements.index', 'Stock Movement', 'stock-movements.index') !!}
+                @endif
+                @if($isManagement)
+                    {!! navItem('reports.index', 'Laporan Penjualan', 'reports.index') !!}
+                    {!! navItem('users.index', 'Kelola Anggota', 'users.index') !!}
+                @endif
+                @if($u->isSuperAdmin())
+                    {!! navItem('audit-logs.index', 'Audit Log', 'audit-logs.index') !!}
+                    {!! navItem('settings.index', 'Pengaturan Sistem', 'settings.index') !!}
+                @endif
+            @endif
+        </nav>
+
+        <div class="p-3 border-t border-red-900/50 space-y-1">
+            <a href="{{ route('account.password') }}" class="block px-4 py-2 text-[11px] text-red-100 hover:text-white rounded-lg hover:bg-red-900/50">Ubah Password</a>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="w-full text-left px-4 py-2 text-[11px] font-semibold text-white hover:bg-red-900/60 rounded-lg">Keluar Sistem</button>
+            </form>
+        </div>
+    </aside>
+
+    {{-- Main --}}
+    <div class="flex-1 ml-64 flex flex-col min-h-screen">
+        <header class="h-16 bg-white border-b border-stone-200 flex items-center justify-between px-8 sticky top-0 z-20">
+            <h2 class="text-sm font-bold text-stone-800">@yield('heading', 'Dashboard')</h2>
+            <div class="text-[11px] text-stone-400 font-mono">{{ config('app.name') }}</div>
+        </header>
+
+        <main class="p-8 flex-1">
+            @if(session('status'))
+                <div class="mb-5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">{{ session('status') }}</div>
+            @endif
+            @if($errors->any())
+                <div class="mb-5 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm">
+                    <ul class="list-disc list-inside space-y-0.5">
+                        @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+                    </ul>
+                </div>
+            @endif
+
+            @yield('content')
+        </main>
+
+        <footer class="py-4 border-t border-stone-200 bg-white/50 px-8 text-[11px] text-stone-400 flex justify-between">
+            <span>&copy; {{ date('Y') }} SKINKU B2B Portal. Powered by SQL + Laravel.</span>
+            <span>HQ Jakarta, Indonesia</span>
+        </footer>
+    </div>
+</div>
+
+<script>
+    // Attach CSRF token to fetch requests by default.
+    window.CSRF = document.querySelector('meta[name="csrf-token"]').content;
+    // Simple modal toggle helper.
+    function toggleModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden');
+    }
+</script>
+@stack('scripts')
+</body>
+</html>

@@ -1,0 +1,246 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Product;
+use App\Models\PurchaseOrder;
+use App\Models\StockMovement;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
+
+class PurchaseOrderService
+{
+    public function __construct(private InventoryService $inventory) {}
+
+    /**
+     * Create a Purchase Order for a partner.
+     *
+     * The total is ALWAYS computed on the server from current DB prices based
+     * on the buyer's role — the client cannot influence pricing or totals.
+     *
+     * @param  array<int,array{product_id:int,qty:int}>  $lines
+     */
+    public function createForPartner(User $buyer, array $lines, ?string $shippingAddress, ?string $notes): PurchaseOrder
+    {
+        $clean = [];
+        foreach ($lines as $line) {
+            $qty = (int) ($line['qty'] ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
+            $clean[(int) $line['product_id']] = ($clean[(int) $line['product_id']] ?? 0) + $qty;
+        }
+
+        if (empty($clean)) {
+            throw ValidationException::withMessages([
+                'items' => 'Pilih minimal satu produk dengan kuantitas di atas 0.',
+            ]);
+        }
+
+        $priceField = $buyer->priceField();
+
+        return DB::transaction(function () use ($buyer, $clean, $priceField, $shippingAddress, $notes) {
+            $products = Product::whereIn('id', array_keys($clean))
+                ->where('status', Product::STATUS_ACTIVE)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            $subtotal = 0.0;
+            $itemsData = [];
+
+            foreach ($clean as $productId => $qty) {
+                $product = $products->get($productId);
+                if (! $product) {
+                    throw ValidationException::withMessages([
+                        'items' => "Produk #{$productId} tidak tersedia atau sudah nonaktif.",
+                    ]);
+                }
+
+                $unitPrice = (float) $product->{$priceField};
+                $lineTotal = $unitPrice * $qty;
+                $subtotal += $lineTotal;
+
+                $itemsData[] = [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'sku' => $product->sku,
+                    'qty' => $qty,
+                    'unit_price' => $unitPrice,
+                    'total_price' => $lineTotal,
+                ];
+            }
+
+            $po = PurchaseOrder::create([
+                'po_number' => $this->generatePoNumber(),
+                'created_by' => $buyer->id,
+                'user_id' => $buyer->id,
+                'company_name' => $buyer->company_name,
+                'user_role' => $buyer->role,
+                'status' => PurchaseOrder::STATUS_PENDING,
+                'subtotal' => $subtotal,
+                'discount' => 0,
+                'total_amount' => $subtotal,
+                'shipping_address' => $shippingAddress ?: $buyer->address,
+                'notes' => $notes,
+            ]);
+
+            $po->items()->createMany($itemsData);
+
+            AuditService::log(
+                action: 'create_po',
+                targetType: 'purchase_order',
+                targetId: $po->id,
+                after: ['po_number' => $po->po_number, 'total_amount' => $subtotal, 'status' => $po->status],
+            );
+
+            return $po->load('items');
+        });
+    }
+
+    /**
+     * Move a PO to the next status. Fulfilment (inventory transaction) only runs
+     * when the PO reaches `completed`, and only once.
+     */
+    public function updateStatus(PurchaseOrder $po, string $next, ?string $notes = null): PurchaseOrder
+    {
+        if (! in_array($next, PurchaseOrder::STATUSES, true)) {
+            throw new RuntimeException("Status '{$next}' tidak valid.");
+        }
+
+        if ($next === $po->status) {
+            return $po;
+        }
+
+        if (! $po->canTransitionTo($next)) {
+            throw new RuntimeException("Transisi status dari '{$po->status}' ke '{$next}' tidak diizinkan.");
+        }
+
+        if ($next === PurchaseOrder::STATUS_COMPLETED) {
+            return $this->complete($po, $notes);
+        }
+
+        $before = $po->status;
+        $po->status = $next;
+        if ($notes) {
+            $po->revision_notes = $notes;
+        }
+        $po->save();
+
+        AuditService::log(
+            action: 'update_po_status',
+            targetType: 'purchase_order',
+            targetId: $po->id,
+            before: ['status' => $before],
+            after: ['status' => $next, 'notes' => $notes],
+        );
+
+        return $po;
+    }
+
+    /**
+     * Atomically fulfil a PO:
+     *   1. Guard against double completion.
+     *   2. Decrement products.hq_stock (fails if insufficient).
+     *   3. Add stock to the buyer's inventory line.
+     *   4. Write OUT (HQ) + PO_FULFILLMENT (partner) stock movements.
+     *   5. Flip status to completed + stamp completed_at.
+     *   6. Audit log.
+     */
+    public function complete(PurchaseOrder $po, ?string $notes = null): PurchaseOrder
+    {
+        return DB::transaction(function () use ($po, $notes) {
+            $po = PurchaseOrder::with('items')->lockForUpdate()->findOrFail($po->id);
+
+            if ($po->status === PurchaseOrder::STATUS_COMPLETED || $po->completed_at !== null) {
+                throw new RuntimeException('PO ini sudah pernah diselesaikan sebelumnya.');
+            }
+
+            foreach ($po->items as $item) {
+                $product = Product::lockForUpdate()->find($item->product_id);
+                if (! $product) {
+                    throw new RuntimeException("Produk untuk item '{$item->product_name}' tidak ditemukan.");
+                }
+
+                if ((int) $product->hq_stock < (int) $item->qty) {
+                    throw new RuntimeException(
+                        "Stok pusat untuk {$product->name} tidak mencukupi (tersedia {$product->hq_stock}, dibutuhkan {$item->qty}). Penyelesaian PO dibatalkan."
+                    );
+                }
+
+                // 3 + 4a: OUT from HQ
+                $this->inventory->adjustHqStock(
+                    product: $product,
+                    delta: -1 * (int) $item->qty,
+                    movementType: StockMovement::TYPE_OUT,
+                    notes: "Pemenuhan PO {$po->po_number}",
+                    referenceType: 'purchase_order',
+                    referenceId: $po->id,
+                );
+
+                // 4 + 4b: PO_FULFILLMENT into partner inventory
+                $this->inventory->adjustPartnerStock(
+                    userId: $po->user_id,
+                    productId: $product->id,
+                    delta: (int) $item->qty,
+                    movementType: StockMovement::TYPE_PO_FULFILLMENT,
+                    notes: "Penerimaan dari PO {$po->po_number}",
+                    referenceType: 'purchase_order',
+                    referenceId: $po->id,
+                );
+            }
+
+            $before = $po->status;
+            $po->status = PurchaseOrder::STATUS_COMPLETED;
+            $po->completed_at = now();
+            if ($notes) {
+                $po->revision_notes = $notes;
+            }
+            $po->save();
+
+            AuditService::log(
+                action: 'complete_po',
+                targetType: 'purchase_order',
+                targetId: $po->id,
+                before: ['status' => $before],
+                after: ['status' => PurchaseOrder::STATUS_COMPLETED, 'completed_at' => (string) $po->completed_at],
+            );
+
+            return $po;
+        });
+    }
+
+    public function cancel(PurchaseOrder $po, ?string $reason = null): PurchaseOrder
+    {
+        if ($po->status === PurchaseOrder::STATUS_COMPLETED) {
+            throw new RuntimeException('PO yang sudah selesai tidak dapat dibatalkan.');
+        }
+
+        $before = $po->status;
+        $po->status = PurchaseOrder::STATUS_CANCELLED;
+        $po->revision_notes = $reason ?: $po->revision_notes;
+        $po->save();
+
+        AuditService::log(
+            action: 'cancel_po',
+            targetType: 'purchase_order',
+            targetId: $po->id,
+            before: ['status' => $before],
+            after: ['status' => PurchaseOrder::STATUS_CANCELLED, 'reason' => $reason],
+        );
+
+        return $po;
+    }
+
+    private function generatePoNumber(): string
+    {
+        $date = now()->format('Ymd');
+        do {
+            $candidate = sprintf('SKN-PO-%s-%04d', $date, random_int(1, 9999));
+        } while (PurchaseOrder::where('po_number', $candidate)->exists());
+
+        return $candidate;
+    }
+}
