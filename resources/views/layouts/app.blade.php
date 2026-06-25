@@ -60,30 +60,41 @@
 
             {!! navItem('dashboard', 'Dashboard', 'dashboard') !!}
 
-            @if($u->isPartner())
+            {{-- Menu visibility follows the configurable role permissions. --}}
+            @if($u->canDo('create_po'))
                 {!! navItem('purchase-orders.create', 'Buat PO', 'purchase-orders.create') !!}
-                {!! navItem('purchase-orders.index', 'Riwayat PO', 'purchase-orders.index') !!}
-                {!! navItem('inventory.index', 'Stok Saya', 'inventory.index') !!}
-                @if($u->role === \App\Models\User::ROLE_DISTRIBUTOR)
-                    {!! navItem('reports.index', 'Laporan Saya', 'reports.index') !!}
-                @endif
-            @else
-                {!! navItem('purchase-orders.index', 'Purchase Orders', 'purchase-orders.index') !!}
-                @if($isManagement)
-                    {!! navItem('products.index', 'Manajemen Produk', 'products.index') !!}
-                @endif
-                {!! navItem('inventory.index', 'Pemantauan Stok', 'inventory.index') !!}
-                @if($u->isGudang())
-                    {!! navItem('stock-movements.index', 'Stock Movement', 'stock-movements.index') !!}
-                @endif
-                @if($isManagement)
-                    {!! navItem('reports.index', 'Laporan Penjualan', 'reports.index') !!}
-                    {!! navItem('users.index', 'Kelola Anggota', 'users.index') !!}
-                @endif
-                @if($u->isSuperAdmin())
-                    {!! navItem('audit-logs.index', 'Audit Log', 'audit-logs.index') !!}
-                    {!! navItem('settings.index', 'Pengaturan Sistem', 'settings.index') !!}
-                @endif
+            @endif
+
+            {!! navItem('purchase-orders.index', $u->isPartner() ? 'Riwayat PO' : 'Purchase Orders', 'purchase-orders.index') !!}
+
+            @if($u->canDo('manage_products'))
+                {!! navItem('products.index', 'Manajemen Produk', 'products.index') !!}
+            @endif
+
+            {!! navItem('inventory.index', $u->isPartner() ? 'Stok Saya' : 'Pemantauan Stok', 'inventory.index') !!}
+
+            @if($u->canDo('manage_hq_stock'))
+                {!! navItem('stock-movements.index', 'Stock Movement', 'stock-movements.index') !!}
+            @endif
+
+            @if($u->canDo('view_reports'))
+                {!! navItem('reports.index', 'Laporan Penjualan', 'reports.index') !!}
+            @endif
+
+            @if($u->canDo('manage_users'))
+                {!! navItem('users.index', 'Kelola Anggota', 'users.index') !!}
+            @endif
+
+            @if($u->canDo('view_audit_log'))
+                {!! navItem('audit-logs.index', 'Audit Log', 'audit-logs.index') !!}
+            @endif
+
+            @if($u->canDo('system_settings'))
+                {!! navItem('settings.index', 'Pengaturan Sistem', 'settings.index') !!}
+            @endif
+
+            @if($u->canDo('manage_permissions'))
+                {!! navItem('permissions.index', 'Manajemen Hak Akses', 'permissions.index') !!}
             @endif
         </nav>
 

@@ -201,9 +201,9 @@ class UserController extends Controller
     {
         $actor = $request->user();
 
-        // Only super_admin may delete, and never a super_admin / self.
-        if (! $actor->isSuperAdmin()) {
-            abort(403, 'Hanya Super Admin yang dapat menghapus pengguna.');
+        // Gated by the configurable "delete_users" capability; never a super_admin / self.
+        if (! $actor->canDo('delete_users')) {
+            abort(403, 'Anda tidak memiliki hak akses untuk menghapus pengguna.');
         }
         if ($user->id === $actor->id) {
             return back()->withErrors(['user' => 'Anda tidak dapat menghapus akun Anda sendiri.']);

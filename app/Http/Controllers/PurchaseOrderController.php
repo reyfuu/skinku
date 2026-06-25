@@ -44,7 +44,7 @@ class PurchaseOrderController extends Controller
     public function create(Request $request)
     {
         $user = $request->user();
-        abort_unless($user->isPartner(), 403, 'Hanya distributor/reseller yang dapat membuat PO.');
+        abort_unless($user->canDo('create_po'), 403, 'Anda tidak memiliki hak akses untuk membuat PO.');
 
         $priceField = $user->priceField();
         $products = Product::query()
@@ -58,7 +58,7 @@ class PurchaseOrderController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user->isPartner(), 403);
+        abort_unless($user->canDo('create_po'), 403);
 
         $data = $request->validate([
             'items' => ['required', 'array', 'min:1'],
@@ -133,7 +133,7 @@ class PurchaseOrderController extends Controller
     public function destroy(Request $request, PurchaseOrder $purchaseOrder): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user->isManagement(), 403, 'Hanya admin/super_admin yang dapat menghapus PO.');
+        abort_unless($user->canDo('delete_po'), 403, 'Anda tidak memiliki hak akses untuk menghapus PO.');
 
         $purchaseOrder->status = PurchaseOrder::STATUS_DELETED;
         $purchaseOrder->deleted_by = $user->id;

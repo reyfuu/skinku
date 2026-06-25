@@ -8,7 +8,7 @@
     $movementTypes = [\App\Models\StockMovement::TYPE_IN, \App\Models\StockMovement::TYPE_OUT, \App\Models\StockMovement::TYPE_ADJUSTMENT];
 @endphp
 
-@if($u->isStaff())
+@if($u->canDo('manage_hq_stock'))
     <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden mb-6">
         <div class="px-5 py-3 border-b border-stone-100 text-sm font-bold text-stone-800">Stok Pusat (HQ)</div>
         <table class="w-full text-xs">

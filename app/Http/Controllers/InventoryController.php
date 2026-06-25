@@ -40,7 +40,7 @@ class InventoryController extends Controller
     public function adjustHq(Request $request): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user->isStaff(), 403);
+        abort_unless($user->canDo('manage_hq_stock'), 403);
 
         $data = $request->validate([
             'product_id' => ['required', 'integer', 'exists:products,id'],

@@ -52,8 +52,8 @@
     </div>
 
     <div class="space-y-4">
-        {{-- Status update for staff --}}
-        @if($u->isStaff() && count($nextStatuses) > 0)
+        {{-- Status update --}}
+        @if($u->canDo('update_po_status') && count($nextStatuses) > 0)
             <div class="bg-white rounded-2xl border border-stone-200 p-5">
                 <h3 class="text-sm font-bold text-stone-800 mb-3">Perbarui Status</h3>
                 <form method="POST" action="{{ route('purchase-orders.status', $purchaseOrder) }}" class="space-y-3"
@@ -73,7 +73,7 @@
 
         {{-- Cancel --}}
         @if(!in_array($purchaseOrder->status, ['completed','cancelled','deleted']))
-            @if($u->isManagement() || ($u->isPartner() && in_array($purchaseOrder->status, ['pending','draft'])))
+            @if($u->canDo('update_po_status') || ($u->isPartner() && in_array($purchaseOrder->status, ['pending','draft'])))
                 <form method="POST" action="{{ route('purchase-orders.cancel', $purchaseOrder) }}" onsubmit="return confirm('Batalkan PO ini?')">
                     @csrf
                     <button class="w-full py-2.5 bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold rounded-xl hover:bg-rose-100">Batalkan PO</button>
@@ -81,8 +81,8 @@
             @endif
         @endif
 
-        {{-- Delete (management) --}}
-        @if($u->isManagement() && $purchaseOrder->status !== 'deleted')
+        {{-- Delete --}}
+        @if($u->canDo('delete_po') && $purchaseOrder->status !== 'deleted')
             <form method="POST" action="{{ route('purchase-orders.destroy', $purchaseOrder) }}" onsubmit="return confirm('Hapus PO (soft delete)?')">
                 @csrf @method('DELETE')
                 <button class="w-full py-2.5 text-stone-500 text-xs font-semibold rounded-xl hover:text-rose-600">Hapus PO (soft delete)</button>

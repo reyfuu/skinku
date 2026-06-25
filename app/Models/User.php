@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Permissions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -108,6 +109,12 @@ class User extends Authenticatable
     public function hasRole(string|array $roles): bool
     {
         return in_array($this->role, (array) $roles, true);
+    }
+
+    /** Configurable capability check (super_admin always true). */
+    public function canDo(string $permission): bool
+    {
+        return Permissions::roleHas($this->role, $permission);
     }
 
     public function isActive(): bool
