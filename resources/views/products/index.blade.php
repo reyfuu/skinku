@@ -61,12 +61,7 @@
                     <td><span class="px-2 py-0.5 rounded-full text-[10px] {{ $p->status==='active' ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-600' }}">{{ $p->status }}</span></td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         @if($p->status !== 'deleted')
-                            @php
-                                $gallery = [];
-                                foreach (($p->images ?? []) as $gp) {
-                                    $gallery[] = ['path' => $gp, 'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($gp)];
-                                }
-                            @endphp
+                            @php $gallery = $p->fileGallery(\App\Models\Product::GALLERY); @endphp
                             <button class="text-stone-500 hover:text-stone-900 font-semibold"
                                 onclick='openProduct({{ json_encode($p->only(["id","name","sku","category","description","price_distributor","price_reseller","price_retail","cogs","hq_stock","status"]) + ["gallery" => $gallery]) }})'>Edit</button>
                             <form method="POST" action="{{ route('products.destroy', $p) }}" class="inline" onsubmit="return confirm('Hapus produk ini (soft delete)?')">
@@ -141,7 +136,7 @@
                 wrap.innerHTML =
                     '<img src="' + img.url + '" class="w-16 h-16 object-cover rounded-lg border border-stone-200">' +
                     '<span class="absolute -top-1 -right-1 bg-white rounded-full border border-stone-200 p-0.5">' +
-                    '<input type="checkbox" name="remove_images[]" value="' + img.path + '" class="accent-red-600" title="hapus"></span>';
+                    '<input type="checkbox" name="remove_files[]" value="' + img.id + '" class="accent-red-600" title="hapus"></span>';
                 existing.appendChild(wrap);
             });
         } else {

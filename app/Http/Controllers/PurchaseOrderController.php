@@ -183,9 +183,11 @@ class PurchaseOrderController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $path = $this->images->storeResized($request->file('proof'), 'payment-proofs', 1600);
+        // Replace any previous proof, then store the new one in the files table.
+        $purchaseOrder->files()->where('collection', PurchaseOrder::PAYMENT_PROOF)->get()->each->delete();
+        $this->images->attach($purchaseOrder, $request->file('proof'), PurchaseOrder::PAYMENT_PROOF, 1600);
 
-        $this->service->recordPaymentProof($purchaseOrder, $path, $data['note'] ?? null);
+        $this->service->recordPaymentProof($purchaseOrder, $data['note'] ?? null);
 
         return back()->with('status', 'Bukti transfer berhasil diunggah. Menunggu verifikasi admin.');
     }

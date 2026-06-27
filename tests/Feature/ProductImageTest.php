@@ -31,7 +31,12 @@ class ProductImageTest extends TestCase
         ], $override);
     }
 
-    public function test_create_resizes_and_stores_multiple_images(): void
+    private function gallery(Product $p)
+    {
+        return $p->files()->where('collection', Product::GALLERY)->get();
+    }
+
+    public function test_create_resizes_and_stores_multiple_images_in_files_table(): void
     {
         Storage::fake('public');
 
@@ -43,16 +48,20 @@ class ProductImageTest extends TestCase
         ]))->assertSessionHasNoErrors();
 
         $p = Product::first();
-        $this->assertCount(2, $p->images);
+        $files = $this->gallery($p);
+        $this->assertCount(2, $files);
 
-        foreach ($p->images as $path) {
-            Storage::disk('public')->assertExists($path);
-            $this->assertStringEndsWith('.jpg', $path); // re-encoded
-            [$w, $h] = getimagesize(Storage::disk('public')->path($path));
-            $this->assertLessThanOrEqual(1280, max($w, $h)); // resized down
+        foreach ($files as $f) {
+            $this->assertEquals('App\\Models\\Product', $f->fileable_type);
+            $this->assertEquals($p->id, $f->fileable_id);
+            Storage::disk('public')->assertExists($f->path);
+            $this->assertStringEndsWith('.jpg', $f->path);
+            [$w, $h] = getimagesize(Storage::disk('public')->path($f->path));
+            $this->assertLessThanOrEqual(1280, max($w, $h));
         }
 
-        $this->assertEquals($p->images[0], $p->image_path); // primary mirrors first
+        $this->assertEquals($files->first()->url(), $p->imageUrl());
+        $this->assertCount(2, $p->imageUrls());
     }
 
     public function test_max_eight_images_enforced(): void
@@ -77,17 +86,19 @@ class ProductImageTest extends TestCase
             'images' => [UploadedFile::fake()->image('a.jpg'), UploadedFile::fake()->image('b.jpg')],
         ]));
         $p = Product::first();
-        $old = $p->images;
+        $old = $this->gallery($p);
         $this->assertCount(2, $old);
+        $removeId = $old->first()->id;
+        $removedPath = $old->first()->path;
 
         $this->actingAs($admin)->put('/products/'.$p->id, $this->baseFields([
-            'remove_images' => [$old[0]],
+            'remove_files' => [$removeId],
             'images' => [UploadedFile::fake()->image('c.jpg')],
         ]))->assertSessionHasNoErrors();
 
         $p->refresh();
-        $this->assertCount(2, $p->images);       // 2 - 1 removed + 1 added
-        $this->assertNotContains($old[0], $p->images);
-        Storage::disk('public')->assertMissing($old[0]);
+        $this->assertCount(2, $this->gallery($p));       // 2 - 1 removed + 1 added
+        $this->assertDatabaseMissing('files', ['id' => $removeId]);
+        Storage::disk('public')->assertMissing($removedPath);
     }
 }

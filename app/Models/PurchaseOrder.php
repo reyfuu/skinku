@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasFiles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 class PurchaseOrder extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasFiles, SoftDeletes;
+
+    /** File collection for the transfer payment proof. */
+    public const PAYMENT_PROOF = 'payment_proof';
 
     public const STATUS_DRAFT = 'draft';
 
@@ -59,7 +62,7 @@ class PurchaseOrder extends Model
     protected $fillable = [
         'po_number', 'created_by', 'user_id', 'company_name', 'user_role',
         'status', 'subtotal', 'discount', 'shipping_cost', 'total_amount',
-        'payment_status', 'payment_proof_path', 'payment_note', 'paid_at', 'payment_verified_by',
+        'payment_status', 'payment_note', 'paid_at', 'payment_verified_by',
         'shipping_address', 'notes', 'revision_notes', 'completed_at', 'deleted_by',
     ];
 
@@ -108,8 +111,6 @@ class PurchaseOrder extends Model
 
     public function paymentProofUrl(): ?string
     {
-        return $this->payment_proof_path
-            ? Storage::disk('public')->url($this->payment_proof_path)
-            : null;
+        return $this->firstFileUrl(self::PAYMENT_PROOF);
     }
 }

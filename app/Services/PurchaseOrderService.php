@@ -265,10 +265,9 @@ class PurchaseOrderService
         return $po;
     }
 
-    /** Buyer uploads a transfer proof; payment moves to awaiting verification. */
-    public function recordPaymentProof(PurchaseOrder $po, string $proofPath, ?string $note = null): PurchaseOrder
+    /** After a transfer proof file is attached, move payment to awaiting verification. */
+    public function recordPaymentProof(PurchaseOrder $po, ?string $note = null): PurchaseOrder
     {
-        $po->payment_proof_path = $proofPath;
         $po->payment_status = PurchaseOrder::PAYMENT_AWAITING;
         $po->payment_note = $note;
         $po->paid_at = null;

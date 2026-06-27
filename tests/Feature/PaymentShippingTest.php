@@ -108,7 +108,9 @@ class PaymentShippingTest extends TestCase
 
         $po->refresh();
         $this->assertEquals(PurchaseOrder::PAYMENT_AWAITING, $po->payment_status);
-        $this->assertNotNull($po->payment_proof_path);
-        Storage::disk('public')->assertExists($po->payment_proof_path);
+        $proof = $po->files()->where('collection', PurchaseOrder::PAYMENT_PROOF)->first();
+        $this->assertNotNull($proof);
+        $this->assertNotNull($po->paymentProofUrl());
+        Storage::disk('public')->assertExists($proof->path);
     }
 }

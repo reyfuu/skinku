@@ -8,7 +8,6 @@ use App\Services\ImageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
@@ -44,18 +43,14 @@ class ProductController extends Controller
     {
         $data = $this->validateData($request);
 
-        $product = Product::create(Arr::except($data, ['images', 'remove_images']));
+        $product = Product::create(Arr::except($data, ['images', 'remove_files']));
 
-        $gallery = [];
         foreach ($request->file('images', []) as $img) {
-            if (count($gallery) >= self::MAX_IMAGES) {
+            if ($product->files()->where('collection', Product::GALLERY)->count() >= self::MAX_IMAGES) {
                 break;
             }
-            $gallery[] = $this->images->storeResized($img, 'products');
+            $this->images->attach($product, $img, Product::GALLERY);
         }
-        $product->images = $gallery;
-        $product->image_path = $gallery[0] ?? null;
-        $product->save();
 
         AuditService::log(
             action: 'create_product',
@@ -73,32 +68,22 @@ class ProductController extends Controller
 
         $before = $product->only(['name', 'sku', 'price_distributor', 'price_reseller', 'price_retail', 'cogs', 'hq_stock', 'status']);
 
-        $product->update(Arr::except($data, ['images', 'remove_images']));
+        $product->update(Arr::except($data, ['images', 'remove_files']));
 
-        $gallery = $product->images ?? [];
-
-        // Remove the images the user unchecked.
-        $remove = $request->input('remove_images', []);
-        if (! empty($remove)) {
-            foreach ($remove as $path) {
-                if (in_array($path, $gallery, true)) {
-                    Storage::disk('public')->delete($path);
-                }
-            }
-            $gallery = array_values(array_diff($gallery, $remove));
+        // Remove the photos the user unchecked (File row + physical file).
+        $removeIds = $request->input('remove_files', []);
+        if (! empty($removeIds)) {
+            $product->files()->where('collection', Product::GALLERY)->whereIn('id', $removeIds)
+                ->get()->each->delete();
         }
 
-        // Append newly uploaded images (capped at MAX_IMAGES total).
+        // Append newly uploaded photos (capped at MAX_IMAGES total).
         foreach ($request->file('images', []) as $img) {
-            if (count($gallery) >= self::MAX_IMAGES) {
+            if ($product->files()->where('collection', Product::GALLERY)->count() >= self::MAX_IMAGES) {
                 break;
             }
-            $gallery[] = $this->images->storeResized($img, 'products');
+            $this->images->attach($product, $img, Product::GALLERY);
         }
-
-        $product->images = $gallery;
-        $product->image_path = $gallery[0] ?? null;
-        $product->save();
 
         AuditService::log(
             action: 'update_product',
@@ -144,8 +129,8 @@ class ProductController extends Controller
             // Up to 8 photos; each auto-resized server-side, so allow large originals.
             'images' => ['nullable', 'array', 'max:'.self::MAX_IMAGES],
             'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:12288'],
-            'remove_images' => ['nullable', 'array'],
-            'remove_images.*' => ['string'],
+            'remove_files' => ['nullable', 'array'],
+            'remove_files.*' => ['integer'],
         ]);
     }
 }

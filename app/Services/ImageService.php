@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\File;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -14,6 +16,35 @@ use Illuminate\Support\Str;
  */
 class ImageService
 {
+    /**
+     * Store an uploaded file against a model's polymorphic file collection.
+     * Images are resized; other file types are stored as-is. Returns the File row.
+     */
+    public function attach(Model $model, UploadedFile $file, string $collection, int $maxDim = 1280): File
+    {
+        $isImage = str_starts_with((string) $file->getClientMimeType(), 'image/')
+            && @getimagesize($file->getRealPath()) !== false;
+
+        $path = $isImage
+            ? $this->storeResized($file, $collection, $maxDim)
+            : $file->store($collection, 'public');
+
+        $nextSort = (int) ($model->files()->where('collection', $collection)->max('sort_order'));
+        if ($model->files()->where('collection', $collection)->exists()) {
+            $nextSort += 1;
+        }
+
+        return $model->files()->create([
+            'collection' => $collection,
+            'disk' => 'public',
+            'path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getClientMimeType(),
+            'size' => $file->getSize(),
+            'sort_order' => $nextSort,
+        ]);
+    }
+
     /**
      * Store an uploaded image resized to fit within $maxDim (px) on the
      * public disk under $dir. Returns the stored relative path.
