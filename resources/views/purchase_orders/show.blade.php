@@ -12,6 +12,16 @@
         'paid'                  => ['Lunas', 'bg-emerald-100 text-emerald-700'],
         'rejected'              => ['Bukti Ditolak', 'bg-rose-100 text-rose-700'],
     ][$po->payment_status] ?? ['-', 'bg-stone-100 text-stone-600'];
+    $statusBadge = match($po->status) {
+        'draft'      => ['📝 Draft', 'bg-stone-100 text-stone-600'],
+        'pending'    => ['⏳ Menunggu', 'bg-amber-100 text-amber-700'],
+        'approved'   => ['✅ Disetujui', 'bg-blue-100 text-blue-700'],
+        'processing' => ['⚙️ Diproses', 'bg-violet-100 text-violet-700'],
+        'shipped'    => ['🚚 Dikirim', 'bg-cyan-100 text-cyan-700'],
+        'completed'  => ['🎉 Selesai', 'bg-emerald-100 text-emerald-700'],
+        'cancelled'  => ['❌ Dibatalkan', 'bg-rose-100 text-rose-600'],
+        default      => [$po->status, 'bg-stone-100 text-stone-500'],
+    };
     $isOwner = $po->user_id === $u->id;
     $canUploadProof = $isOwner || $u->canDo('update_po_status');
 @endphp
@@ -24,7 +34,7 @@
                     <p class="text-xs text-stone-500 mt-1">{{ $purchaseOrder->created_at?->format('d M Y H:i') }}</p>
                 </div>
                 <div class="flex flex-col items-end gap-1.5">
-                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-stone-100 text-stone-700">{{ $purchaseOrder->status }}</span>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold {{ $statusBadge[1] }}">{{ $statusBadge[0] }}</span>
                     <span class="px-3 py-1 rounded-full text-[10px] font-bold {{ $payBadge[1] }}">{{ $payBadge[0] }}</span>
                 </div>
             </div>
