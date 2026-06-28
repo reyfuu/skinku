@@ -87,7 +87,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script type="module">
     const trend = @json($salesTrend);
     const poStatus = @json($poStatus);
 

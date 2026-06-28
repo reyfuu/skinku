@@ -5,17 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') · {{ config('app.name') }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: { extend: { colors: {
-                brand: { dark: '#1c1917', gold: '#c8a96a', emerald: '#0f4c3a', cream: '#faf7f2' }
-            }}}
-        };
-    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
     @stack('head')
 </head>
 <body class="h-full bg-stone-100 text-stone-800 antialiased">
@@ -49,13 +43,14 @@
             </div>
         </div>
 
-        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto text-xs font-semibold">
+        <nav class="flex-1 overflow-y-auto no-scrollbar text-xs font-semibold">
+            <div class="px-3 py-2 space-y-0.5">
             @php
                 if (!function_exists('navItem')) {
                     function navItem($route, $label, $active) {
                         $is = request()->routeIs($active);
                         $cls = $is ? 'bg-red-900 text-white border-l-4 border-white pl-3' : 'text-red-100 hover:text-white hover:bg-red-900/50 pl-4';
-                        return '<a href="'.route($route).'" class="flex items-center gap-3 pr-4 py-2.5 rounded-lg '.$cls.'">'.$label.'</a>';
+                        return '<a href="'.route($route).'" class="flex items-center gap-3 pr-4 py-2 rounded-lg '.$cls.'">'.$label.'</a>';
                     }
                 }
             @endphp
@@ -91,13 +86,10 @@
                 {!! navItem('audit-logs.index', 'Audit Log', 'audit-logs.index') !!}
             @endif
 
-            @if($u->canDo('system_settings'))
-                {!! navItem('settings.index', 'Pengaturan Sistem', 'settings.index') !!}
-            @endif
-
             @if($u->canDo('manage_permissions'))
                 {!! navItem('permissions.index', 'Manajemen Hak Akses', 'permissions.index') !!}
             @endif
+            </div>
         </nav>
 
         <div class="p-3 border-t border-red-900/50 space-y-1">
@@ -117,18 +109,13 @@
         </header>
 
         <main class="p-8 flex-1">
-            @if(session('status'))
-                <div class="mb-5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">{{ session('status') }}</div>
-            @endif
-            @if($errors->any())
-                <div class="mb-5 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm">
-                    <ul class="list-disc list-inside space-y-0.5">
-                        @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
-                    </ul>
-                </div>
-            @endif
+            @if (session('status'))
+            <div class="mb-4 px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-semibold">
+                {{ session('status') }}
+            </div>
+        @endif
 
-            @yield('content')
+        @yield('content')
         </main>
 
         <footer class="py-4 border-t border-stone-200 bg-white/50 px-8 text-[11px] text-stone-400 flex justify-between">

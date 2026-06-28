@@ -6,12 +6,11 @@
 @php $u = auth()->user(); @endphp
 <div class="flex justify-between items-center mb-4">
     <form method="GET" class="flex gap-2">
-        <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari no PO / perusahaan…" class="px-3 py-2 text-sm border border-stone-300 rounded-lg w-60">
-        <select name="status" class="px-3 py-2 text-sm border border-stone-300 rounded-lg">
+        <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari no PO / perusahaan…" class="px-3 py-2 text-sm border border-stone-300 rounded-lg w-60" onkeydown="if(event.key === 'Enter'){ this.form.submit(); }">
+        <select name="status" class="px-3 py-2 text-sm border border-stone-300 rounded-lg" onchange="this.form.submit()">
             <option value="">Semua Status</option>
             @foreach($statuses as $s)<option value="{{ $s }}" @selected(($filters['status'] ?? '')===$s)>{{ $s }}</option>@endforeach
         </select>
-        <button class="px-4 py-2 text-sm bg-stone-200 rounded-lg hover:bg-stone-300">Filter</button>
     </form>
     @if($u->isPartner())
         <a href="{{ route('purchase-orders.create') }}" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">+ Buat PO</a>

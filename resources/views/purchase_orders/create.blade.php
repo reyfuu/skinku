@@ -61,11 +61,11 @@
             <div class="bg-white rounded-2xl border border-stone-200 p-5 space-y-3">
                 <div>
                     <label class="block text-xs font-semibold text-stone-700 mb-1">Alamat Pengiriman</label>
-                    <textarea name="shipping_address" rows="2" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg">{{ old('shipping_address', $user->address) }}</textarea>
+                    <textarea name="shipping_address" rows="2" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-y">{{ old('shipping_address', $user->address) }}</textarea>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-stone-700 mb-1">Catatan</label>
-                    <textarea name="notes" rows="2" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg">{{ old('notes') }}</textarea>
+                    <textarea name="notes" rows="2" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-y">{{ old('notes') }}</textarea>
                 </div>
                 <button class="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl">Ajukan PO</button>
             </div>

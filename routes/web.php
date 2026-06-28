@@ -77,6 +77,7 @@ Route::middleware(['auth', 'role'])->group(function () {
     Route::middleware('permission:manage_hq_stock')->group(function () {
         Route::post('/inventory/hq-adjust', [InventoryController::class, 'adjustHq'])->name('inventory.hq-adjust');
         Route::get('/stock-movements', [StockMovementController::class, 'index'])->name('stock-movements.index');
+        Route::get('/stock-movements/chart-data', [StockMovementController::class, 'chartData'])->name('stock-movements.chart-data');
     });
 
     /* ---------------- Reports ---------------- */

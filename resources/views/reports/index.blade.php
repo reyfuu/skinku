@@ -55,7 +55,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script type="module">
     const D = {
         trend: @json($salesTrend),
         product: @json($salesByProduct),

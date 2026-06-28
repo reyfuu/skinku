@@ -8,16 +8,16 @@
 <div class="flex justify-between items-center mb-4">
     <form method="GET" class="flex gap-2">
         <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari nama/username/email…"
-               class="px-3 py-2 text-sm border border-stone-300 rounded-lg w-64">
-        <select name="role" class="px-3 py-2 text-sm border border-stone-300 rounded-lg">
+               class="px-3 py-2 text-sm border border-stone-300 rounded-lg w-64"
+               onkeydown="if(event.key === 'Enter'){ this.form.submit(); }">
+        <select name="role" class="px-3 py-2 text-sm border border-stone-300 rounded-lg" onchange="this.form.submit()">
             <option value="">Semua Role</option>
             @foreach($roles as $r)<option value="{{ $r }}" @selected(($filters['role'] ?? '')===$r)>{{ $r }}</option>@endforeach
         </select>
-        <select name="status" class="px-3 py-2 text-sm border border-stone-300 rounded-lg">
+        <select name="status" class="px-3 py-2 text-sm border border-stone-300 rounded-lg" onchange="this.form.submit()">
             <option value="">Semua Status</option>
             @foreach(['active','inactive','deleted'] as $s)<option value="{{ $s }}" @selected(($filters['status'] ?? '')===$s)>{{ $s }}</option>@endforeach
         </select>
-        <button class="px-4 py-2 text-sm bg-stone-200 rounded-lg hover:bg-stone-300">Filter</button>
     </form>
     <button onclick="openCreateUser()" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">+ Tambah User</button>
 </div>
@@ -51,20 +51,39 @@
                     </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         @if($row->status !== 'deleted')
-                            <button class="text-stone-500 hover:text-stone-900 font-semibold"
-                                onclick='openEditUser({{ json_encode($row->only(["id","fullname","email","username","role","company_name","phone","address","region","status"])) }})'>Edit</button>
-                            <form method="POST" action="{{ route('users.toggle-status', $row) }}" class="inline">
-                                @csrf
-                                <button class="ml-2 text-amber-600 hover:text-amber-800 font-semibold">{{ $row->status === 'active' ? 'Nonaktifkan' : 'Aktifkan' }}</button>
-                            </form>
-                            <button class="ml-2 text-blue-600 hover:text-blue-800 font-semibold"
-                                onclick='openResetPw({{ $row->id }}, {{ json_encode($row->fullname) }})'>Reset PW</button>
-                            @if($isSuper && !$row->isSuperAdmin() && $row->id !== auth()->id())
-                                <form method="POST" action="{{ route('users.destroy', $row) }}" class="inline" onsubmit="return confirm('Hapus user ini (soft delete)?')">
-                                    @csrf @method('DELETE')
-                                    <button class="ml-2 text-rose-600 hover:text-rose-800 font-semibold">Hapus</button>
+                            <div class="flex items-center justify-end gap-1.5">
+                                <button title="Edit User" class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-900 transition-colors"
+                                    onclick='openEditUser({{ json_encode($row->only(["id","fullname","email","username","role","company_name","phone","address","region","status"])) }})'>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    <span>Edit</span>
+                                </button>
+                                <form method="POST" action="{{ route('users.toggle-status', $row) }}" class="inline">
+                                    @csrf
+                                    <button title="{{ $row->status === 'active' ? 'Nonaktifkan User' : 'Aktifkan User' }}" class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded-lg transition-colors {{ $row->status === 'active' ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 hover:text-amber-900' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 hover:text-emerald-900' }}">
+                                        @if($row->status === 'active')
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                                            <span>Nonaktifkan</span>
+                                        @else
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            <span>Aktifkan</span>
+                                        @endif
+                                    </button>
                                 </form>
-                            @endif
+                                <button title="Reset Password" class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 hover:text-blue-900 transition-colors"
+                                    onclick='openResetPw({{ $row->id }}, {{ json_encode($row->fullname) }})'>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                                    <span>Reset PW</span>
+                                </button>
+                                @if($isSuper && !$row->isSuperAdmin() && $row->id !== auth()->id())
+                                    <form method="POST" action="{{ route('users.destroy', $row) }}" class="inline" onsubmit="return confirm('Hapus user ini (soft delete)?')">
+                                        @csrf @method('DELETE')
+                                        <button title="Hapus User" class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 hover:text-rose-900 transition-colors">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            <span>Hapus</span>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                         @else
                             <span class="text-stone-400">—</span>
                         @endif

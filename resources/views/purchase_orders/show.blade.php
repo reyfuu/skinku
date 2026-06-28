@@ -170,7 +170,7 @@
                     <select name="status" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg">
                         @foreach($nextStatuses as $s)<option value="{{ $s }}">{{ $s }}</option>@endforeach
                     </select>
-                    <textarea name="notes" rows="2" placeholder="Catatan (opsional)" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"></textarea>
+                    <textarea name="notes" rows="2" placeholder="Catatan (opsional)" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-y"></textarea>
                     <button class="w-full py-2.5 bg-red-600 text-white text-sm font-semibold rounded-xl">Perbarui Status</button>
                 </form>
                 @if(in_array('completed', $nextStatuses))

@@ -42,5 +42,5 @@
 </div>
 <div class="col-span-2">
     <label class="block text-xs font-semibold text-stone-700 mb-1">Alamat</label>
-    <textarea name="address" rows="2" class="w-full px-3 py-2 border border-stone-300 rounded-lg">{{ old('address') }}</textarea>
+    <textarea name="address" rows="2" class="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-y">{{ old('address') }}</textarea>
 </div>

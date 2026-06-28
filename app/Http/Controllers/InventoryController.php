@@ -33,7 +33,38 @@ class InventoryController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('inventory.index', compact('user', 'hqProducts', 'partnerStock'));
+        // Chart Data: Top 10 Lowest Stock
+        $chartCategories = [];
+        $chartSeries = [];
+        $chartColors = [];
+
+        if ($user->isStaff()) {
+            $topHq = Product::query()
+                ->where('status', '!=', Product::STATUS_DELETED)
+                ->orderBy('hq_stock', 'asc')
+                ->limit(10)
+                ->get();
+            $chartCategories = $topHq->pluck('name')->map(fn($n) => str($n)->limit(15))->toArray();
+            $chartSeries = [
+                ['name' => 'Stok Pusat', 'data' => $topHq->pluck('hq_stock')->toArray()]
+            ];
+            $chartColors = ['#10b981']; // emerald
+        } else {
+            $topPartner = Inventory::query()
+                ->with('product')
+                ->where('user_id', $user->id)
+                ->orderBy('stock', 'asc')
+                ->limit(10)
+                ->get();
+            $chartCategories = $topPartner->map(fn($i) => str($i->product->name ?? '-')->limit(15))->toArray();
+            $chartSeries = [
+                ['name' => 'Stok Toko', 'data' => $topPartner->pluck('stock')->toArray()],
+                ['name' => 'Minimum Stok', 'data' => $topPartner->pluck('minimum_stock')->toArray()]
+            ];
+            $chartColors = ['#3b82f6', '#f43f5e']; // blue, rose
+        }
+
+        return view('inventory.index', compact('user', 'hqProducts', 'partnerStock', 'chartCategories', 'chartSeries', 'chartColors'));
     }
 
     /** HQ stock adjustment (gudang / management only). */
