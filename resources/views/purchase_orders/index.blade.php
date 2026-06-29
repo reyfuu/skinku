@@ -6,12 +6,11 @@
 @php $u = auth()->user(); @endphp
 <div class="flex justify-between items-center mb-4">
     <form method="GET" class="flex gap-2">
-        <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari no PO / perusahaan…" class="px-3 py-2 text-sm border border-stone-300 rounded-lg w-60">
-        <select name="status" class="px-3 py-2 text-sm border border-stone-300 rounded-lg">
+        <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari no PO / perusahaan…" class="px-3 py-2 text-sm border border-stone-300 rounded-lg w-60" onkeydown="if(event.key === 'Enter'){ this.form.submit(); }">
+        <select name="status" class="px-3 py-2 text-sm border border-stone-300 rounded-lg" onchange="this.form.submit()">
             <option value="">Semua Status</option>
             @foreach($statuses as $s)<option value="{{ $s }}" @selected(($filters['status'] ?? '')===$s)>{{ $s }}</option>@endforeach
         </select>
-        <button class="px-4 py-2 text-sm bg-stone-200 rounded-lg hover:bg-stone-300">Filter</button>
     </form>
     @if($u->isPartner())
         <a href="{{ route('purchase-orders.create') }}" class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">+ Buat PO</a>
@@ -37,7 +36,29 @@
                     <td class="text-stone-600">{{ $po->company_name ?? ($po->user->fullname ?? '-') }}</td>
                     <td class="text-stone-500">{{ $po->created_at?->format('d M Y H:i') }}</td>
                     <td class="text-right">Rp {{ number_format($po->total_amount, 0, ',', '.') }}</td>
-                    <td><span class="px-2 py-0.5 rounded-full text-[10px] bg-stone-100 text-stone-700">{{ $po->status }}</span></td>
+                    @php
+                        $badge = match($po->status) {
+                            'draft'      => 'bg-stone-100 text-stone-600',
+                            'pending'    => 'bg-amber-100 text-amber-700',
+                            'approved'   => 'bg-blue-100 text-blue-700',
+                            'processing' => 'bg-violet-100 text-violet-700',
+                            'shipped'    => 'bg-cyan-100 text-cyan-700',
+                            'completed'  => 'bg-emerald-100 text-emerald-700',
+                            'cancelled'  => 'bg-rose-100 text-rose-600',
+                            default      => 'bg-stone-100 text-stone-500',
+                        };
+                        $label = match($po->status) {
+                            'draft'      => '📝 Draft',
+                            'pending'    => '⏳ Menunggu',
+                            'approved'   => '✅ Disetujui',
+                            'processing' => '⚙️ Diproses',
+                            'shipped'    => '🚚 Dikirim',
+                            'completed'  => '🎉 Selesai',
+                            'cancelled'  => '❌ Dibatalkan',
+                            default      => $po->status,
+                        };
+                    @endphp
+                    <td><span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold {{ $badge }}">{{ $label }}</span></td>
                     <td class="px-4 py-3 text-right">
                         <a href="{{ route('purchase-orders.show', $po) }}" class="text-stone-600 hover:text-red-600 font-semibold">Detail</a>
                     </td>

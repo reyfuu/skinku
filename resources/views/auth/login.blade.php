@@ -16,7 +16,7 @@
                 <p class="mt-10 text-2xl font-serif leading-snug text-red-50">Sinergi Keindahan &amp; Sistem Distribusi Cerdas.</p>
                 <div class="w-16 h-[2px] bg-white mt-6"></div>
             </div>
-            <p class="text-[11px] text-red-200">Sumber data utama: SQL Database. Aman, cepat, dan terkontrol.</p>
+            <p class="text-[11px] text-red-200">Power by AIpreneurship</p>
         </div>
 
         {{-- Form side --}}

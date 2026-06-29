@@ -9,6 +9,18 @@
 @endphp
 
 @if($u->canDo('manage_hq_stock'))
+    <div class="bg-white rounded-2xl border border-stone-200 p-6 mb-6">
+        <h3 class="text-sm font-bold text-stone-800 mb-4">Pemantauan Stok (10 Produk Stok Pusat Terendah)</h3>
+        <div id="inventoryChart" class="w-full h-80"></div>
+    </div>
+@else
+    <div class="bg-white rounded-2xl border border-stone-200 p-6 mb-6">
+        <h3 class="text-sm font-bold text-stone-800 mb-4">Pemantauan Stok (10 Produk Toko Terendah)</h3>
+        <div id="inventoryChart" class="w-full h-80"></div>
+    </div>
+@endif
+
+@if($u->canDo('manage_hq_stock'))
     <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden mb-6">
         <div class="px-5 py-3 border-b border-stone-100 text-sm font-bold text-stone-800">Stok Pusat (HQ)</div>
         <table class="w-full text-xs">
@@ -78,3 +90,54 @@
 </div>
 <div class="mt-4">{{ $partnerStock->links() }}</div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const categories = @json($chartCategories ?? []);
+        const seriesData = @json($chartSeries ?? []);
+        const colors = @json($chartColors ?? []);
+
+        if (categories.length === 0 || seriesData.length === 0) return;
+
+        const options = {
+            series: seriesData,
+            chart: {
+                type: 'bar',
+                height: 320,
+                toolbar: { show: false },
+                fontFamily: 'inherit'
+            },
+            colors: colors,
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    columnWidth: '50%',
+                    borderRadius: 4
+                },
+            },
+            dataLabels: { enabled: false },
+            stroke: { show: true, width: 2, colors: ['transparent'] },
+            xaxis: {
+                categories: categories,
+                labels: { style: { colors: '#78716c', fontSize: '10px' } }
+            },
+            yaxis: {
+                labels: { style: { colors: '#78716c', fontSize: '10px' } }
+            },
+            fill: { opacity: 1 },
+            tooltip: {
+                y: { formatter: function (val) { return val + " unit" } }
+            },
+            legend: {
+                position: 'top',
+                horizontalAlign: 'right'
+            }
+        };
+
+        const chart = new ApexCharts(document.querySelector("#inventoryChart"), options);
+        chart.render();
+    });
+</script>
+@endpush

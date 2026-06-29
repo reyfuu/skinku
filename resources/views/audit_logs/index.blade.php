@@ -4,12 +4,11 @@
 
 @section('content')
 <form method="GET" class="flex gap-2 mb-4">
-    <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari aksi/email…" class="px-3 py-2 text-sm border border-stone-300 rounded-lg w-56">
-    <select name="action" class="px-3 py-2 text-sm border border-stone-300 rounded-lg">
+    <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari aksi/email…" class="px-3 py-2 text-sm border border-stone-300 rounded-lg w-56" onkeydown="if(event.key === 'Enter'){ this.form.submit(); }">
+    <select name="action" class="px-3 py-2 text-sm border border-stone-300 rounded-lg" onchange="this.form.submit()">
         <option value="">Semua Aksi</option>
         @foreach($actions as $a)<option value="{{ $a }}" @selected(($filters['action'] ?? '')===$a)>{{ $a }}</option>@endforeach
     </select>
-    <button class="px-4 py-2 text-sm bg-stone-200 rounded-lg hover:bg-stone-300">Filter</button>
 </form>
 
 <div class="bg-white rounded-2xl border border-stone-200 overflow-hidden">
