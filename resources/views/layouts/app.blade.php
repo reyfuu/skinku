@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+       <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <title>@yield('title', 'Dashboard') · {{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -119,7 +120,7 @@
         </main>
 
         <footer class="py-4 border-t border-stone-200 bg-white/50 px-8 text-[11px] text-stone-400 flex justify-between">
-            <span>&copy; {{ date('Y') }} SKINKU B2B Portal. Powered by SQL + Laravel.</span>
+            <span>&copy; {{ date('Y') }} SKINKU B2B Portal. Powered by AIpreneurship.</span>
             <span>HQ Jakarta, Indonesia</span>
         </footer>
     </div>

@@ -20,7 +20,7 @@ class ChartDataSeeder extends Seeder
 
         $svc = app(PurchaseOrderService::class);
         
-        $partners = User::whereIn('role', [User::ROLE_DISTRIBUTOR, User::ROLE_RESELLER], 'and', false)->get();
+        $partners = User::whereIn('role', [User::ROLE_DISTRIBUTOR, User::ROLE_RESELLER])->get();
         $products = Product::all();
 
         if ($partners->isEmpty() || $products->isEmpty()) {
